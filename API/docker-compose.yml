@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: ecom-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: discover
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Eureka Server (Service Discovery)
+  microspring:
+    build:
+      context: ./microspring
+      dockerfile: Dockerfile
+    container_name: ecom-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - mysql
+
+networks:
+  ecom-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  maven-repo:
+    driver: local
+  redis_data:
+    driver: local
+
