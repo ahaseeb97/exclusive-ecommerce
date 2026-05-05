@@ -1,0 +1,100 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Public routes - No authentication required
+
+        #Products and catogeries api
+        - id: products-public
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/products/all
+            - Method=GET
+        
+        - id: products-by-id-public
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/products/{id}
+            - Method=GET
+        
+        - id: products-categories-public
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/products/categories
+            - Method=GET
+
+        - id: categories-public
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/categories/all
+            - Method=GET    
+
+        # Auth Service
+        - id: auth-service
+          uri: lb://MICROAUTH
+          predicates:
+            - Path=/auth/**
+        
+        # Requires ROLE_USER
+        - id: product-service
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/products/**
+          filters:
+            - Auth=ROLE_USER
+            
+        - id: category-service
+          uri: lb://MICROPRODUCTS
+          predicates:
+            - Path=/api/categories/**
+          filters:
+            - Auth=ROLE_USER    
+
+        - id: order-service
+          uri: lb://MICROORDERS
+          predicates:
+            - Path=/api/orders/user/{userId}
+            - Method=GET
+          filters:
+            - Auth=ROLE_USER,ROLE_ADMIN    
+        
+        # Orders Service - Requires ROLE_ADMIN
+        - id: order-service
+          uri: lb://MICROORDERS
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - Auth=ROLE_ADMIN
+        
+        # Cart Service - Requires ROLE_USER    
+        - id: cart-service
+          uri: lb://MICROCART
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - Auth=ROLE_USER  
+        
+        # Payment Service - Requires ROLE_USER
+        - id: payment-service
+          uri: lb://MICROPAYMENT
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - Auth=ROLE_USER    
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.web.server: DEBUG
