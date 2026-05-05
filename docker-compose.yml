@@ -39,6 +39,34 @@ services:
       start_period: 60s
     depends_on:
       - mysql
+      
+  # API Gateway
+  microgateway:
+    build:
+      context: ./microgateway
+      dockerfile: Dockerfile
+    container_name: ecom-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://microspring:8761/eureka/
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      microspring:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s   
 
 networks:
   ecom-network:
