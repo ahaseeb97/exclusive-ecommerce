@@ -1,0 +1,38 @@
+# Maven
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+nbactions.xml
+nb-configuration.xml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+HELP.md
+*.md
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+**/test/
+
+# SQL migration files (not needed in Docker build)
+*.sql
+

@@ -20,6 +20,42 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+      
+  # Redis Cache for Token Blacklist
+  redis:
+    image: redis:7-alpine
+    container_name: ecom-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecom-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Build Helper module and cache in Maven repo
+  helper-builder:
+    image: maven:3.9-eclipse-temurin-21
+    container_name: ecom-helper-builder
+    volumes:
+      - ./microservices/helper:/app
+      - maven-repo:/root/.m2/repository
+    working_dir: /app
+    command: sh -c "mvn clean install -DskipTests && touch /tmp/helper-built && tail -f /dev/null"
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/helper-built"]
+      interval: 5s
+      timeout: 3s
+      retries: 1
+      start_period: 60s      
 
   # Eureka Server (Service Discovery)
   microspring:
@@ -97,7 +133,38 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s       
+      start_period: 60s    
+   
+  # Products Service (depends on Helper module)
+  microproducts:
+    build:
+      context: ./microservices
+      dockerfile: microproducts/Dockerfile
+    container_name: ecom-products
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://microspring:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/discover?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345678
+    volumes:
+      - maven-repo:/root/.m2/repository
+    depends_on:
+      helper-builder:
+        condition: service_healthy
+      microspring:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s   
 
 networks:
   ecom-network:
