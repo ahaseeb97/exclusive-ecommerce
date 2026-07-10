@@ -164,7 +164,34 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s   
+      start_period: 60s 
+      
+  # Orders Service
+  microorders:
+    build:
+      context: ./microorders
+      dockerfile: Dockerfile
+    container_name: ecom-orders
+    ports:
+      - "8084:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://microspring:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/discover?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345678
+    depends_on:
+      microspring:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecom-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s        
 
 networks:
   ecom-network:
